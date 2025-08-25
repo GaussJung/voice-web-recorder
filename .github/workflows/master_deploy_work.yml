@@ -29,12 +29,15 @@ jobs:
         run: |
           aws configure set default.s3.addressing_style path
 
+      # S3 Source remove  
+      - name: Remove S3 Source 
+        run: |
+          aws s3 rb s3:/ ${{ vars.S3_BUCKETNAME }}/pilot/  --recursive --force
+ 
+
       # S3 Upload and Sync 
       - name: Deploy (S3 sync)
         run: |
-          echo "S3_BUCKETNAME=${{ vars.S3_BUCKETNAME }}"   #  without 's3://'
-          aws s3 rb s3:/ ${{ vars.S3_BUCKETNAME }}/pilot/  --recursive --force
-  
           aws s3 sync ./src s3://${{ vars.S3_BUCKETNAME }}/pilot/ \
             --exclude ".git/*" \
             --exclude ".github/*" \

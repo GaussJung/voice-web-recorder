@@ -1,0 +1,70 @@
+/* audioWorker.css
+ * version: v1.01
+ * description: myAudioWorker UI 스타일 (슬라이더 레이아웃, 로그 박스, 텍스트영역)
+ */
+
+body { font-family: system-ui, sans-serif; padding: 16px; }
+button { margin-right: 8px; margin-bottom: 8px; }
+
+/* 로그 상자: 최대 800px + 긴 토큰 줄바꿈 처리 + 연한 회색 배경 */
+#logArea {
+  margin-top: 12px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-break: anywhere;
+  overflow-x: hidden;
+  font-size: 12px;
+  color: #444;
+  width: 100%;
+  max-width: 800px;
+  background-color: #f5f5f5;
+  padding: 8px;
+  border-radius: 6px;
+}
+
+/* Base64 텍스트 영역: 최대 800px */
+#base64audio {
+  width: 100%;
+  max-width: 800px;
+  height: 180px;
+  margin-top: 12px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.control-row {
+  margin: 10px 0 6px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+/* 컨테이너: 슬라이더/경과표시가 같은 폭을 공유하도록 묶음 */
+.slider-container {
+  min-width: 400px;
+  max-width: 800px;
+  width: 100%;
+  margin-top: 8px;
+}
+
+/* 경과 시간(우측 정렬, 컨테이너 기준) */
+.slider-head {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #666;
+}
+.elapsed { min-width: 64px; text-align: right; }
+
+/* 슬라이더 행: 컨테이너 폭을 따르며 좌측 정렬 */
+.slider-wrap { display: flex; justify-content: flex-start; margin-top: 6px; }
+
+/* 슬라이더는 컨테이너 너비를 100% 사용 */
+#audioRecordSlider,
+#audioPlayerSlider { width: 100%; }
+
+/* 숫자 입력 폭 */
+#audioRecordTime { width: 120px; padding: 6px 8px; }

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MP3 Record</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 16px; }
+    button { margin-right: 8px; margin-bottom: 8px; }
+    #log { margin-top: 12px; white-space: pre-wrap; font-size: 12px; color: #444; }
+    #base64audio { width: 100%; height: 180px; margin-top: 12px; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  </style>
+</head>
+<body>
+  <h2>MP3 Recorder v1.25 voice</h2>
+  <div>
+    <button id="startRecordButton">녹음 시작</button>
+    <button id="stopRecordButton" disabled>녹음 중지</button>
+    <button id="playButton" disabled>녹음된 오디오 재생</button>
+    <button id="stopPlayButton" disabled>녹음된 오디오 재생중지</button>
+    <br/>
+    <button id="downloadButton" disabled>MP3 다운로드</button>
+    <button id="viewBase64Button" disabled>Base64 보기</button>
+    <button id="s3UploadButton" disabled>S3 업로드</button>
+    <button id="base64UploadButton" disabled>Base64 업로드</button>
+  </div>
+
+  <div id="log"></div>
+
+  <!-- Base64 출력 영역 -->
+  <textarea id="base64audio" placeholder="여기에 MP3 Base64 문자열이 표시됩니다." readonly></textarea>
+
+  <!-- MP3 인코딩용 lamejs (CDN) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
+
+  <!-- 녹음/인코딩/업로드 로직 -->
+  <script src="audioRecord.js" defer></script>
+</body>
+</html>

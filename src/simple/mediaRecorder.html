@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MediaRecorder Audio Recorder 예제</title>
+</head>
+<body>
+<button id="startButton">Start Recording</button>
+<button id="stopButton" disabled>Stop Recording</button>
+<audio id="audioElement" controls></audio>
+
+<script>
+let audioStream;
+let mediaRecorder;
+let chunks = [];
+
+const startButton = document.getElementById('startButton');
+const stopButton = document.getElementById('stopButton');
+const audioElement = document.getElementById('audioElement');
+
+startButton.addEventListener('click', startRecording);
+stopButton.addEventListener('click', stopRecording);
+
+function startRecording() {
+    navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(function(stream) {
+            audioStream = stream;
+            mediaRecorder = new MediaRecorder(stream);
+            mediaRecorder.ondataavailable = function(event) {
+                chunks.push(event.data);
+            };
+            mediaRecorder.onstop = function() {
+                const blob = new Blob(chunks, { 'type' : 'audio/ogg; codecs=opus' });
+                chunks = [];
+                const audioURL = URL.createObjectURL(blob);
+                audioElement.src = audioURL;
+            };
+            mediaRecorder.start();
+            startButton.disabled = true;
+            stopButton.disabled = false;
+        })
+        .catch(function(err) {
+            console.error('Error accessing the microphone: ' + err);
+        });
+}
+
+function stopRecording() {
+    mediaRecorder.stop();
+    audioStream.getTracks().forEach(track => track.stop());
+    startButton.disabled = false;
+    stopButton.disabled = true;
+}
+</script>
+</body>
+</html>

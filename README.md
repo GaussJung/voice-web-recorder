@@ -1,4 +1,4 @@
-## Voice-Web-Recorder v0.93a  
+## Voice-Web-Recorder v0.93-b 
 - simple voice recorder using brower supporting ES6
 
 ## Pre-requsite

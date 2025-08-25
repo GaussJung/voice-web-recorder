@@ -6,8 +6,8 @@ on:
       - master
 
 permissions:
-  id-token: write     # OIDC로 Role Assume에 필요
-  contents: read
+  id-token: write     # Essential for OIDC AssumeRole 
+  contents: read      # for actions/checkout
 
 jobs:
   build:
@@ -17,19 +17,19 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
 
-      # GitHub OIDC로 AWS 자격 구성
+      # GitHub OIDC for AWS IAM Role Assume
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
-          aws-region: ap-northeast-2     # S3만 쓰면 없어도 되지만, 안전하게 명시
+          aws-region: ap-northeast-2  # Seoul 
 
-      # 점(.) 포함 버킷 대응: path-style 강제 (web.ebaeum.com 같은 버킷)
+      # bucket including dot(.) : path-style 강제 (ex : web.example.com)
       - name: Force S3 path-style for dotted bucket names
         run: |
           aws configure set default.s3.addressing_style path
 
-      # S3 업로드/동기화
+      # S3 Upload and Sync 
       - name: Deploy (S3 sync)
         run: |
           echo "S3_BUCKETNAME=${{ vars.S3_BUCKETNAME }}"   # 값은 's3:// 없이' 버킷명만!
@@ -38,7 +38,7 @@ jobs:
             --exclude ".github/*" \
             --exclude ".gitignore"
 
-      # CloudFront 무효화 (글로벌 서비스: region 옵션 불필요)
+      # CloudFront Invalidation (Global Service : region no need)
       - name: CDN invalidate
         run: |
           echo "CLOUDFRONT_DISTRIBUTION_ID=${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}"

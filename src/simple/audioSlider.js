@@ -5,7 +5,7 @@
  */
 
 // ===== Settings (endpoints) =====
-const version = "v0.96-g";
+const version = "v0.96-h";
 console.log(`audioSlider ${version}`);
 
 // ===== DOM =====

@@ -1,9 +1,9 @@
 /**
  * myAudio-engine.js
- * version: v1.01
+ * version: v1.03
  * description:
- *   브라우저 오디오 엔진(녹음/재생/인코딩) 모듈. UI와 분리되어 있으며,
- *   EventTarget 기반 커스텀 이벤트로 진행률/정지/에러를 알림 
+ *   Browser audio engine (record/play/encode) module. Separated from the UI
+ *   and reports progress/stop/error via EventTarget-based custom events.
  *
  * Events (Recorder):
  *   - 'progress' { detail: { elapsed, target } }
@@ -16,13 +16,13 @@
  *   - 'ended'    {}
  *
  * Note
- * - MP3 인코더(lamejs)는 전역(Global)로 로드 
- *   (HTML에서 CDN 스크립트를 먼저 포함: lamejs 1.2.1)
+ * - MP3 encoder (lamejs) is loaded globally.
+ *   (Include CDN script in HTML first: lamejs 1.2.1)
  */
 
-export const ENGINE_VERSION = "v1.01";
+export const ENGINE_VERSION = "v1.03";
 
-/* ===== 내부 유틸 ===== */
+/* ===== Internal utilities ===== */
 function float32ToInt16(float32Array) {
   const out = new Int16Array(float32Array.length);
   for (let i = 0; i < float32Array.length; i++) {
@@ -32,7 +32,7 @@ function float32ToInt16(float32Array) {
   return out;
 }
 
-// Float32Array 병합
+// Merge Float32Array chunks
 function mergeFloat32(chunks) {
   const total = chunks.reduce((acc, a) => acc + a.length, 0);
   const out = new Float32Array(total);
@@ -41,7 +41,7 @@ function mergeFloat32(chunks) {
   return out;
 };
 
-// 오디오 제약조건 빌드
+// Build audio constraints
 export function buildAudioConstraints(profile = "voice", channels = 1) {
   if (profile === "music") {
     return {
@@ -61,7 +61,7 @@ export function buildAudioConstraints(profile = "voice", channels = 1) {
   };
 }
 
-// MP3 인코딩 
+// MP3 encoding
 export function encodeMP3FromFloat32Chunks(chunks, sampleRate, kbps = 128, channels = 1) {
   if (!Array.isArray(chunks) || !chunks.length) throw new Error("No audio chunks to encode.");
   if (!window.lamejs?.Mp3Encoder) throw new Error("lamejs not loaded.");
@@ -92,7 +92,7 @@ export function encodeMP3FromFloat32Chunks(chunks, sampleRate, kbps = 128, chann
 }
 
 /* ============================================================
- * Class : Recorder : 마이크 캡처 + Worklet 수집 + (옵션) 컴프레서/게인
+ * Class: Recorder — mic capture + Worklet collection + (optional) compressor/gain
  * ============================================================ */
 export class Recorder extends EventTarget {
   constructor({ profile = "voice", kbps = 96 } = {}) {
@@ -109,7 +109,7 @@ export class Recorder extends EventTarget {
 
     this.sampleRate = 48000;
     this.chunks = [];      // Float32Array[]
-    this._mp3Blob = null;  // 인코딩 캐시
+    this._mp3Blob = null;  // encoding cache
 
     this._startTs = 0;
     this._targetSec = 60;
@@ -217,7 +217,7 @@ export class Recorder extends EventTarget {
   }
 
   ensureMP3Ready() {
-    if (!this.chunks.length) throw new Error("인코딩할 오디오가 없습니다.");
+    if (!this.chunks.length) throw new Error("No audio to encode.");
     if (!this._mp3Blob) {
       this._mp3Blob = encodeMP3FromFloat32Chunks(this.chunks, this.sampleRate, this.kbps, this.CHANNELS);
     }
@@ -230,7 +230,7 @@ export class Recorder extends EventTarget {
 }
 
 /* ============================================================
- * Class : Player: Blob 로드 + 재생/일시정지/정지 + 시간 이벤트
+ * Class: Player — load Blob + play/pause/stop + time events
  * ============================================================ */
 export class Player extends EventTarget {
   constructor() {

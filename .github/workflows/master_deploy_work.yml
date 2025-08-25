@@ -32,7 +32,9 @@ jobs:
       # S3 Upload and Sync 
       - name: Deploy (S3 sync)
         run: |
-          echo "S3_BUCKETNAME=${{ vars.S3_BUCKETNAME }}"   # 값은 's3:// 없이' 버킷명만!
+          echo "S3_BUCKETNAME=${{ vars.S3_BUCKETNAME }}"   #  without 's3://'
+          aws s3 rb s3:/ ${{ vars.S3_BUCKETNAME }}/pilot/  --recursive --force
+  
           aws s3 sync ./src s3://${{ vars.S3_BUCKETNAME }}/pilot/ \
             --exclude ".git/*" \
             --exclude ".github/*" \

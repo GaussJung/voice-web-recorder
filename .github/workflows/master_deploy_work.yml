@@ -1,0 +1,36 @@
+name: master_deploy_work
+
+on:
+  push:
+    branches:
+      - master     
+
+jobs:
+  build:
+    runs-on: ubuntu-latest  
+    steps:
+      - name: Checkout source code
+      - uses: actions/checkout@v4
+ 
+      # AWS CLI For Deploy : Copy or Sync 
+      # (Copy example) aws s3 cp   ./src   s3://data-blockexample-bucket  --recursive  --exclude ".git/*"   --exclude ".github/*"  --exclude ".gitignore"     
+      # (Sync example) aws s3 sync ./out   s3://data-blockexample-bucket --exclude ".git/*"   --exclude ".github/*"  --exclude ".gitignore" 
+      - name: Deploy
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          echo "S3_BUCKETNAME : ${{ vars.S3_BUCKETNAME}}"
+          aws s3 sync ./src s3://${{ vars.S3_BUCKETNAME }}/pilot/ \
+            --exclude ".git/*" \
+            --exclude ".github/*" \
+            --exclude ".gitignore"
+
+      # (CloudFront Invalidation Example) aws cloudfront create-invalidation --distribution-id  E23D---FR3---3  --paths "/pilot/*"    
+      - name: CDN_INVALIDATE
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        run: |
+          echo "CLOUDFRONT_DISTRIBUTION_ID : ${{ vars.CLOUDFRONT_DISTRIBUTION_ID}}"
+          aws cloudfront create-invalidation --distribution-id   ${{ vars.CLOUDFRONT_DISTRIBUTION_ID}}  --paths "/pilot/*"   

@@ -1,11 +1,11 @@
 /**
  * audioSlider.js
- * version: 0.96-e
+ * version: 0.96-f
  * description: 녹음 시간(초) 입력 + 진행 슬라이더(400~800px) + 시간 경과 시 자동 중지
  */
 
 // ===== 설정(엔드포인트) =====
-const version = "v0.96-e";
+const version = "v0.96-f";
 console.log(`audioSlider ${version}`);
 
 // ===== DOM =====

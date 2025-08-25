@@ -1,12 +1,10 @@
 /**
  * audioSlider.js
- * version: 1.21
+ * version: 0.96-e
  * description: 녹음 시간(초) 입력 + 진행 슬라이더(400~800px) + 시간 경과 시 자동 중지
  */
 
 // ===== 설정(엔드포인트) =====
-const PRESIGNED_URL_ENDPOINT = "/api/presigned-url";
-const BASE64_UPLOAD_ENDPOINT = "/api/upload-base64";
 const version = "v1.21";
 console.log(`audioSlider ${version}`);
 
@@ -288,7 +286,7 @@ async function startRecording() {
   revokeLastURL();
   mp3Blob = null;
   recordedChunks = [];
-  if (base64Textarea) base64Textarea.value = '';
+  
   setPlayerEnabled(false);
   setPauseResumeState({ canPause: false, canResume: false });
   if (playerTimeEl) playerTimeEl.textContent = "0";

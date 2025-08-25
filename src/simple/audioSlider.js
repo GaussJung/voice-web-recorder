@@ -5,7 +5,7 @@
  */
 
 // ===== 설정(엔드포인트) =====
-const version = "v1.21";
+const version = "v0.96-e";
 console.log(`audioSlider ${version}`);
 
 // ===== DOM =====

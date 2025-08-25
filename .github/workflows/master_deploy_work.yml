@@ -32,7 +32,7 @@ jobs:
       # S3 Source remove  
       - name: Remove S3 Source 
         run: |
-          aws s3 rb s3:/ ${{ vars.S3_BUCKETNAME }}/pilot/  --recursive --force
+          aws s3 rm s3:/ ${{ vars.S3_BUCKETNAME }}/pilot/  --recursive  
  
 
       # S3 Upload and Sync 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -8,25 +8,25 @@
     body { font-family: system-ui, sans-serif; padding: 16px; }
     button { margin-right: 8px; margin-bottom: 8px; }
 
-    /* Log box: max 800px + wrap long tokens + light gray background */
+    /* 로그 상자: 최대 800px + 긴 토큰 줄바꿈 처리 + 연한 회색 배경 */
     #logArea {
       margin-top: 12px;
-      white-space: pre-wrap;         /* keep \n + allow normal wrapping */
-      overflow-wrap: anywhere;       /* wrap long strings without spaces */
-      word-break: break-word;        /* browser compatibility */
-      line-break: anywhere;          /* flexible CJK line breaking */
-      overflow-x: hidden;            /* hide horizontal overflow */
+      white-space: pre-wrap;         /* \n 유지 + 일반 줄바꿈 허용 */
+      overflow-wrap: anywhere;       /* 공백 없는 긴 문자열도 줄바꿈 */
+      word-break: break-word;        /* 일부 브라우저 호환 */
+      line-break: anywhere;          /* CJK 등 줄바꿈 유연화 */
+      overflow-x: hidden;            /* 가로 넘침 숨김 */
       font-size: 12px;
       color: #444;
       width: 100%;
       max-width: 800px;
-      background-color: #f5f5f5;     /* light gray background */
+      background-color: #f5f5f5;     /*  연한 회색 배경 */
     }
 
-    /* Control row: buttons/labels/number inputs/sliders, etc. */
+    /* 컨트롤 행: 버튼/레이블/숫자입력/슬라이더 등 */
     .control-row { margin: 10px 0 6px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 
-    /* Container: group so slider/elapsed share the same width */
+    /* 컨테이너: 슬라이더/경과표시가 같은 폭을 공유하도록 묶음 */
     .slider-container {
       min-width: 400px;
       max-width: 800px;
@@ -34,7 +34,7 @@
       margin-top: 8px;
     }
 
-    /* Elapsed time (right-aligned, relative to container) */
+    /* 경과 시간(우측 정렬, 컨테이너 기준) */
     .slider-head {
       display: flex;
       justify-content: flex-end;
@@ -45,47 +45,49 @@
     }
     .elapsed { min-width: 64px; text-align: right; }
 
-    /* Slider row: left-aligned, follows container width */
+    /* 슬라이더 행: 컨테이너 폭을 따르며 좌측 정렬 */
     .slider-wrap { display: flex; justify-content: flex-start; margin-top: 6px; }
 
-    /* Sliders use 100% of the container width */
+    /* 슬라이더는 컨테이너 너비를 100% 사용 */
     #audioRecordSlider,
     #audioPlayerSlider { width: 100%; }
 
-    /* Numeric input width */
+    /* 숫자 입력 폭 */
     #audioRecordTime { width: 120px; padding: 6px 8px; }
 
-    /* Divider (hr) adjusted to container width */
-    .section-hr {
-      max-width: 800px;
-      width: 100%;
-      margin: 16px 0;
-      border: none;
-      border-top: 1px solid #ddd;
-    }
+
+  /* 구분선(hr)을 컨테이너 폭에 맞게 정리 */
+  .section-hr {
+    max-width: 800px;
+    width: 100%;
+    margin: 16px 0;
+    border: none;
+    border-top: 1px solid #ddd;
+  }
+
+
   </style>
 </head>
 <body>
   <h2>MP3 Recorder + Slider v0.96-h</h2>
 
-  <!-- Button box -->
+  <!-- 버튼 박스 -->
   <div>
-    <button id="startRecordButton">Start Recording</button>
-    <button id="stopRecordButton" disabled>Stop Recording</button>
+    <button id="startRecordButton">녹음 시작</button>
+    <button id="stopRecordButton" disabled>녹음 중지</button>
     <br/>
-    <button id="playButton" disabled>Play Recorded Audio</button>
-    <button id="stopPlayButton" disabled>Stop Playback</button>
-    <button id="downloadButton" disabled>Download MP3</button>
+    <button id="playButton" disabled>녹음된 오디오 재생</button>
+    <button id="stopPlayButton" disabled>녹음된 오디오 재생중지</button>
+    <button id="downloadButton" disabled>MP3 다운로드</button>
    </div>
 
-  <!-- Divider: before RECORD container -->
+  <!-- 구분선: 녹음 컨테이너 앞 -->
   <hr class="section-hr">
-
-  <!-- RECORD section -->
+  <!-- 녹음 영역 -->
   <div id="audioRecordContainer" class="slider-container">
-    <!-- Record time (seconds) -->
+    <!-- 녹음 시간(초) -->
     <div class="control-row">
-      <label for="audioRecordTime">Record Time (seconds):</label>
+      <label for="audioRecordTime">녹음 시간(초) :</label>
       <input
         type="number"
         id="audioRecordTime"
@@ -97,13 +99,13 @@
       />
     </div>
 
-    <!-- Recording elapsed (top-right) -->
+    <!-- 녹음 경과 (우측 상단) -->
     <div class="slider-head" aria-live="polite">
-      <span>Recording Elapsed:&nbsp;</span>
+      <span>녹음 경과:&nbsp;</span>
       <span id="audioRecordElapsed" class="elapsed">0.0s</span>
     </div>
 
-    <!-- Recording slider -->
+    <!-- 녹음 슬라이더 -->
     <div class="slider-wrap">
       <input
         type="range"
@@ -112,31 +114,30 @@
         max="60"
         step="0.01"
         value="0"
-        aria-label="Recording progress (sec)"
+        aria-label="녹음 진행률(초)"
       >
     </div>
   </div>
 
-  <!-- Divider: before PLAYER container -->
+  <!-- 구분선: 재생 컨테이너 앞 -->
   <hr class="section-hr">
-
-  <!-- PLAYBACK section -->
+  <!-- 재생 영역 -->
   <div id="audioPlayerContainer" class="slider-container">
-    <!-- Playback time/slider + Pause/Play -->
+    <!-- 재생 시간/슬라이더 + Pause/Play -->
     <div class="control-row">
-      <label for="audioPlayerSlider">Playback Position (sec):</label>
+      <label for="audioPlayerSlider">재생 시간(초) :</label>
       <span id="audioPlayerTime" aria-live="polite">0</span>
       <button id="audioPauseButton" disabled>Pause</button>
       <button id="audioResumeButton" disabled>Play</button>
     </div>
 
-    <!-- Playback elapsed (top-right) -->
+    <!-- 재생 경과 (우측 상단) -->
     <div class="slider-head" aria-live="polite">
-      <span>Playback Elapsed:&nbsp;</span>
+      <span>재생 경과:&nbsp;</span>
       <span id="audioPlayerElapsed" class="elapsed">0.0s</span>
     </div>
 
-    <!-- Playback slider -->
+    <!-- 재생 슬라이더 -->
     <div class="slider-wrap">
       <input
         type="range"
@@ -146,18 +147,18 @@
         step="0.01"
         value="0"
         disabled
-        aria-label="Playback progress (sec)"
+        aria-label="재생 진행률(초)"
       >
     </div>
   </div>
 
-  <!-- Log box -->
+  <!-- 로그 박스 -->
   <div id="logArea"></div>
  
-  <!-- lamejs for MP3 encoding (CDN) -->
+  <!-- MP3 인코딩용 lamejs (CDN) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
 
-  <!-- Recording/encoding/upload/slider logic -->
+  <!-- 녹음/인코딩/업로드/슬라이더 로직 -->
   <script src="audioSlider.js?v=0.96-h" defer></script>
 </body>
 </html>

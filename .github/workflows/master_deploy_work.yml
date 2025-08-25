@@ -3,33 +3,45 @@ name: master_deploy_work
 on:
   push:
     branches:
-      - master     
+      - master
+
+permissions:
+  id-token: write     # OIDC로 Role Assume에 필요
+  contents: read
 
 jobs:
   build:
-    runs-on: ubuntu-latest  
+    runs-on: ubuntu-latest
+
     steps:
       - name: Checkout source code
         uses: actions/checkout@v4
- 
-      # AWS CLI For Deploy : Copy or Sync 
-      # (Copy example) aws s3 cp   ./src   s3://data-blockexample-bucket  --recursive  --exclude ".git/*"   --exclude ".github/*"  --exclude ".gitignore"     
-      # (Sync example) aws s3 sync ./out   s3://data-blockexample-bucket --exclude ".git/*"   --exclude ".github/*"  --exclude ".gitignore" 
-      - name: Deploy
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      # GitHub OIDC로 AWS 자격 구성
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_GITHUB_ROLE_ARN }}
+          aws-region: ap-northeast-2     # S3만 쓰면 없어도 되지만, 안전하게 명시
+
+      # 점(.) 포함 버킷 대응: path-style 강제 (web.ebaeum.com 같은 버킷)
+      - name: Force S3 path-style for dotted bucket names
         run: |
+          aws configure set default.s3.addressing_style path
+
+      # S3 업로드/동기화
+      - name: Deploy (S3 sync)
+        run: |
+          echo "S3_BUCKETNAME=${{ vars.S3_BUCKETNAME }}"   # 값은 's3:// 없이' 버킷명만!
           aws s3 sync ./src s3://${{ vars.S3_BUCKETNAME }}/pilot/ \
             --exclude ".git/*" \
             --exclude ".github/*" \
             --exclude ".gitignore"
 
-      # (CloudFront Invalidation Example) aws cloudfront create-invalidation --distribution-id  E23D---FR3---3  --paths "/pilot/*"    
-      - name: CDN_INVALIDATE
-        env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      # CloudFront 무효화 (글로벌 서비스: region 옵션 불필요)
+      - name: CDN invalidate
         run: |
-          echo "CLOUDFRONT_DISTRIBUTION_ID : ${{ vars.CLOUDFRONT_DISTRIBUTION_ID}}"
-          aws cloudfront create-invalidation --distribution-id   ${{ vars.CLOUDFRONT_DISTRIBUTION_ID}}  --paths "/pilot/*"   
+          echo "CLOUDFRONT_DISTRIBUTION_ID=${{ vars.CLOUDFRONT_DISTRIBUTION_ID }}"
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ vars.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/pilot/*"

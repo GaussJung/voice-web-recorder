@@ -1,20 +1,13 @@
 /**
  * myAudio-app.js
- * version: v1.07-h
+ * version: v1.08-a
  * description:
  *   앱(UI) 레이어. '대기 후 자동 녹음' + 업로드 버튼 동작.
- *   DOM을 잡고 버튼/슬라이더/라벨/로그를 엔진에 연결합니다.
- *   엔진(Recorder/Player)은 DOM을 모르며, 이벤트로만 소통합니다.
- *
- * Change Log
- * - v1.06 (2025-08-22): S3 업로드 호출을 myUploads v1.06 인터페이스로 변경
- *                       (uploadToS3(blob, { keyname, endpoint?, contentType? })) / S3 key는 선행 "/" 없이 사용
- * - v1.04 (2025-08-22): '대기 취소' 제거. 대기 중에는 stop 버튼 비활성화, 레이블을 '녹음 중지'로 변경.
- * - v1.03 (2025-08-22): 대기 타이머/슬라이더/경과 표시 + 자동 녹음 시작 기능 추가
- * - v1.01: 초기 모듈화 버전
+ *   DOM을 잡고 버튼/슬라이더/라벨/로그를 엔진에 연결
+ *   엔진(Recorder/Player)은 DOM과 관계없이 이벤트 기반으로 동작
  */
 
-import { ENGINE_VERSION, Recorder, Player } from "./myAudio-engine.js?v=1.03";
+import { ENGINE_VERSION, Recorder, Player } from "./myAudio-engine.js?v=1.08";
 import {
   PRESIGNED_URL_ENDPOINT,
   uploadBase64ToServer,
@@ -28,7 +21,7 @@ const APP_VERSION = "v1.07-h";
 const BASE_PROFILE = "voice"; 
 console.log(`myAudio-app ${APP_VERSION}, engine=${ENGINE_VERSION}, profile=${BASE_PROFILE}`);
 
-/* ===== DOM ===== */
+// DOM 요소
 const waitRecordButton   = document.getElementById("waitRecordButton");
 const startRecordButton  = document.getElementById("startRecordButton");
 const stopRecordButton   = document.getElementById("stopRecordButton");
@@ -58,7 +51,7 @@ const playerElapsedEl = document.getElementById("audioPlayerElapsed");
 const pauseBtn        = document.getElementById("audioPauseButton");
 const resumeBtn       = document.getElementById("audioResumeButton");
 
-/* ===== 로깅 유틸 ===== */
+// 로그 출력
 function log(msg = "") {
   console.log(msg);
   if (!logAreaEl) return;
@@ -68,17 +61,19 @@ function log(msg = "") {
 const secs  = (n) => Math.max(0, Math.round(n));
 const secs1 = (n) => Number.isFinite(n) ? `${(Math.floor(Math.max(0,n)*10)/10).toFixed(1)}s` : "0.0s";
  
-/* ===== UI 상태 유틸 ===== */
+// 플레이어 활성/비활성
 function setPlayerEnabled(enabled) {
   if (playerSlider) playerSlider.disabled = !enabled;
   if (!enabled) { pauseBtn.disabled = true; resumeBtn.disabled = true; }
 };
 
+// 일시정지/재개 버튼 상태
 function setPauseResumeState({ canPause, canResume }) {
   pauseBtn.disabled  = !canPause;
   resumeBtn.disabled = !canResume;
 };
 
+// 재생/정지 버튼 상태
 function updatePlaybackUI(isPlaying) {
   if (isPlaying) {
     startRecordButton.disabled = true;
@@ -95,6 +90,7 @@ function updatePlaybackUI(isPlaying) {
   }
 };
 
+// 녹음 슬라이더 초기화
 function resetRecordSliderWithMax(maxSec) {
   if (!recordSlider) return;
   recordSlider.min   = "0";
@@ -103,6 +99,7 @@ function resetRecordSliderWithMax(maxSec) {
   if (recordElapsedEl) recordElapsedEl.textContent = "0.0s";
 };
 
+// 대기 슬라이더 초기화
 function resetWaitSliderWithMax(maxSec) {
   if (!waitSlider) return;
   waitSlider.min   = "0";
@@ -113,11 +110,10 @@ function resetWaitSliderWithMax(maxSec) {
 
 /* ===== 엔진 인스턴스 생성 ===== */
 // const recorder = new Recorder({ profile: "voice", kbps: 96 });
-
-const recorder = new Recorder({ profile: BASE_PROFILE, kbps: 128 });
+const recorder = new Recorder({ profile: BASE_PROFILE, kbps: 96 });
 const player   = new Player();
 
-/* ===== 초기 세팅 ===== */
+// 초기 설정 
 (function initSetup() {
   const initWait = parseInt(waitTimeInput?.value ?? "30", 10) || 30;
   resetWaitSliderWithMax(initWait);
@@ -134,10 +130,7 @@ const player   = new Player();
 
 })();
 
-/* =========================
-   대기(카운트다운) → 자동 녹음
-   (대기 취소 없음)
-========================= */
+// 대기/녹음/재생 상태 변수 
 let isWaiting = false;
 let waitStartTs = 0;
 let waitTargetSec = 30;
@@ -147,6 +140,7 @@ let waitTimerId = null;
 let recodingCount = 0;     // 녹음횟수(녹음시작 혹은 자동녹음시작시에 추가됨) 
 let currentUploadNum = 0;  // 현재업로드횟수 (업로드시에 추가됨 )
 
+// 대기 타이머/애니메이션 정리
 function clearWaitTimers() {
   if (waitRafId) cancelAnimationFrame(waitRafId);
   waitRafId = null;
@@ -154,6 +148,7 @@ function clearWaitTimers() {
   waitTimerId = null;
 };
 
+// 대기 슬라이더 애니메이션
 function animateWaitSlider() {
   if (!isWaiting || !waitStartTs) return;
   const elapsed = (performance.now() - waitStartTs) / 1000;
@@ -163,6 +158,7 @@ function animateWaitSlider() {
   waitRafId = requestAnimationFrame(animateWaitSlider);
 };
 
+// 녹음 시작 (지정된 시간, 기본 60초)
 async function startRecordingWithDuration(recDuration) {
   // 재생 중이면 끊고 0으로
   player.stop();
@@ -204,6 +200,7 @@ async function startRecordingWithDuration(recDuration) {
 
 };
 
+// '대기 후 자동 녹음' 시작
 function startWaitThenRecord() {
 
   if (isWaiting) return; // 중복 방지
@@ -250,15 +247,14 @@ function startWaitThenRecord() {
 
 };
 
-/* =========================
-   녹음/정지
-========================= */
+// 레코더 프로그레스 이벤트
 recorder.addEventListener("progress", (e) => {
   const { elapsed, target } = e.detail;
   if (recordSlider) recordSlider.value = Math.min(elapsed, target).toFixed(3);
   if (recordElapsedEl) recordElapsedEl.textContent = secs1(elapsed);
 });
 
+// 레코더 정치 이벤트
 recorder.addEventListener("stopped", async (e) => {
   const { reason, chunksLength } = e.detail;
 
@@ -300,19 +296,25 @@ recorder.addEventListener("stopped", async (e) => {
 
 });
 
+// 레코더 오류 이벤트
 recorder.addEventListener("error", (e) => {
   log("Recorder error: " + (e.detail?.message || ""));
 });
 
-/* ===== Player 이벤트 ===== */
+
+// 플레이어 시간 갱신 이벤트 
 player.addEventListener("time", (e) => {
   const { currentTime } = e.detail;
   if (playerSlider && !playerSlider.disabled) playerSlider.value = String(currentTime || 0);
   if (playerElapsedEl) playerElapsedEl.textContent = secs1(currentTime || 0);
 });
+
+// 플레이어 일시정지/종료 이벤트
 player.addEventListener("paused", () => {
   setPauseResumeState({ canPause: false, canResume: true });
 });
+
+// 플레이어 종료 이벤트
 player.addEventListener("ended", () => {
   updatePlaybackUI(false);
   setPauseResumeState({ canPause: false, canResume: true });
@@ -321,9 +323,10 @@ player.addEventListener("ended", () => {
   log("Playback ended/stopped");
 });
 
-/* ===== UI 핸들러 ===== */
+// '대기 후 자동 녹음' 버튼: 대기 중에는 비활성화
 waitRecordButton.addEventListener("click", startWaitThenRecord);
 
+// '녹음 시작' 버튼: 녹음 중이거나 대기 중이 아니면 동작
 startRecordButton.addEventListener("click", async () => {
   // 대기 중에는 수동 녹음 불가 (취소 기능 없음)
   if (isWaiting) {
@@ -344,6 +347,7 @@ stopRecordButton.addEventListener("click", () => {
   }
 });
 
+// '재생' 버튼: 재생 중이 아니고 데이터가 있을 때만 동작
 playButton.addEventListener("click", () => {
   player.play(0)
     .then(() => {
@@ -358,7 +362,10 @@ playButton.addEventListener("click", () => {
     });
 });
 
+// '정지' 버튼: 재생 중일 때만 동작
 pauseBtn.addEventListener("click", () => { try { player.pause(); } catch (e) { log("Pause 오류: " + e.message); } });
+
+// '재개' 버튼: 일시정지 중일 때만 동작
 resumeBtn.addEventListener("click", () => {
   const t = parseFloat(playerSlider?.value || "0");
   player.play(Number.isFinite(t) ? Math.max(0, t) : 0)
@@ -370,6 +377,7 @@ resumeBtn.addEventListener("click", () => {
     .catch(err => log("Resume 오류: " + err.message));
 });
 
+// '정지' 버튼: 재생 중일 때만 동작
 stopPlayButton.addEventListener("click", () => {
   try {
     player.stop();
@@ -390,6 +398,8 @@ waitSlider?.addEventListener("input", () => {
   waitSlider.value = Math.min(elapsed, waitTargetSec).toFixed(3);
   if (waitElapsedEl) waitElapsedEl.textContent = secs1(elapsed);
 });
+
+ 
 recordSlider?.addEventListener("input", () => {
   // 녹음 중에만 경과값에 동기화 (엔진에서 progress 이벤트로 갱신)
 });
@@ -399,12 +409,14 @@ waitTimeInput?.addEventListener("change", () => {
   const sec = parseInt(waitTimeInput.value, 10) || 30;
   resetWaitSliderWithMax(Math.max(1, Math.min(3600, sec)));
 });
+
+// 시간 입력 변경 → 슬라이더 max 갱신
 timeInput?.addEventListener("change", () => {
   const sec = parseInt(timeInput.value, 10) || 60;
   resetRecordSliderWithMax(Math.max(1, Math.min(3600, sec)));
 });
 
-/* ===== 다운로드/업로드 ===== */
+// 다운로드 버튼: 데이터가 있을 때만 동작
 downloadButton.addEventListener("click", () => {
   try {
     recorder.ensureMP3Ready();
@@ -425,6 +437,7 @@ downloadButton.addEventListener("click", () => {
   }
 });
 
+// Base64 보기 버튼: 데이터가 있을 때만 동작
 viewBase64Button.addEventListener("click", async () => {
   try {
     recorder.ensureMP3Ready();
@@ -471,9 +484,8 @@ function appendMp3Link(mp3path) {
   }
 };
  
-// S3업로드 리스너 
+// S3 업로드 클릭 리스너
 s3UploadButton.addEventListener("click", async () => {
-
 
   if ( recodingCount === 0 ) {
     alert("녹음을 진행한 후에 업로드 가능합니다!"); 

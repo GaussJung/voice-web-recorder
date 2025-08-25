@@ -31,15 +31,17 @@ function float32ToInt16(float32Array) {
   }
   return out;
 }
+
+// Float32Array 병합
 function mergeFloat32(chunks) {
   const total = chunks.reduce((acc, a) => acc + a.length, 0);
   const out = new Float32Array(total);
   let offset = 0;
   for (const a of chunks) { out.set(a, offset); offset += a.length; }
   return out;
-}
+};
 
-/* ===== 캡처 제약 ===== */
+// 오디오 제약조건 빌드
 export function buildAudioConstraints(profile = "voice", channels = 1) {
   if (profile === "music") {
     return {
@@ -59,7 +61,7 @@ export function buildAudioConstraints(profile = "voice", channels = 1) {
   };
 }
 
-/* ===== MP3 인코딩 ===== */
+// MP3 인코딩 
 export function encodeMP3FromFloat32Chunks(chunks, sampleRate, kbps = 128, channels = 1) {
   if (!Array.isArray(chunks) || !chunks.length) throw new Error("No audio chunks to encode.");
   if (!window.lamejs?.Mp3Encoder) throw new Error("lamejs not loaded.");
@@ -90,7 +92,7 @@ export function encodeMP3FromFloat32Chunks(chunks, sampleRate, kbps = 128, chann
 }
 
 /* ============================================================
- * Recorder: 마이크 캡처 + Worklet 수집 + (옵션) 컴프레서/게인
+ * Class : Recorder : 마이크 캡처 + Worklet 수집 + (옵션) 컴프레서/게인
  * ============================================================ */
 export class Recorder extends EventTarget {
   constructor({ profile = "voice", kbps = 96 } = {}) {
@@ -228,7 +230,7 @@ export class Recorder extends EventTarget {
 }
 
 /* ============================================================
- * Player: Blob 로드 + 재생/일시정지/정지 + 시간 이벤트
+ * Class : Player: Blob 로드 + 재생/일시정지/정지 + 시간 이벤트
  * ============================================================ */
 export class Player extends EventTarget {
   constructor() {

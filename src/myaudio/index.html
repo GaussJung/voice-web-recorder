@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
@@ -7,31 +7,31 @@
   <link rel="stylesheet" href="myAudio.css?v=1.09">
 </head>
 <body>
-  <h2>My Voice Recorder v1.09-a</h2>
+  <h2>My Voice Recorder v1.09-b</h2>
 
-  <!-- 버튼 박스 -->
+  <!-- Button box -->
   <div>
-    <button id="waitRecordButton">대기후 자동녹음시작</button>
+    <button id="waitRecordButton">Start Auto-Record After Wait</button>
     <br/>
-    <button id="startRecordButton">녹음 시작</button>
-    <button id="stopRecordButton" disabled>녹음 중지</button>
-    <button id="playButton" disabled>녹음된 오디오 재생</button>
-    <button id="stopPlayButton" disabled>녹음된 오디오 재생중지</button>
+    <button id="startRecordButton">Start Recording</button>
+    <button id="stopRecordButton" disabled>Stop Recording</button>
+    <button id="playButton" disabled>Play Recorded Audio</button>
+    <button id="stopPlayButton" disabled>Stop Playback</button>
     <br/>
-    <button id="downloadButton" disabled>MP3 다운로드</button>
-    <button id="viewBase64Button" disabled>Base64 보기</button>
-    <button id="s3UploadButton" disabled>MP3 업로드</button>
-    <button id="base64UploadButton" disabled  style="display:none;" >Base64 업로드</button>
+    <button id="downloadButton" disabled>Download MP3</button>
+    <button id="viewBase64Button" disabled>View Base64</button>
+    <button id="s3UploadButton" disabled>Upload MP3</button>
+    <button id="base64UploadButton" disabled style="display:none;">Upload Base64</button>
   </div>
 
-  <!-- 구분선: 대기시간 컨테이너 앞 -->
+  <!-- Divider: before WAIT container -->
   <hr class="section-hr">
 
-  <!-- 대기 영역 -->
+  <!-- WAIT section -->
   <div id="waitRecordContainer" class="slider-container">
-    <!-- 대기 시간(초) -->
+    <!-- Wait time (seconds) -->
     <div class="control-row">
-      <label for="audioWaitTime">대기 시간(초) :</label>
+      <label for="audioWaitTime">Wait Time (seconds):</label>
       <input
         type="number"
         id="audioWaitTime"
@@ -43,13 +43,13 @@
       />
     </div>
 
-    <!-- 대기 경과 (우측 상단) -->
+    <!-- Wait elapsed (top-right) -->
     <div class="slider-head" aria-live="polite">
-      <span>대기 경과:&nbsp;</span>
+      <span>Wait Elapsed:&nbsp;</span>
       <span id="audioWaitElapsed" class="elapsed">0.0s</span>
     </div>
 
-    <!-- 대기 슬라이더 -->
+    <!-- Wait slider -->
     <div class="slider-wrap">
       <input
         type="range"
@@ -58,19 +58,19 @@
         max="30"
         step="0.01"
         value="0"
-        aria-label="대기 진행률(초)"
+        aria-label="Wait progress (sec)"
       >
     </div>
   </div>
 
-  <!-- 구분선: 녹음 컨테이너 앞 -->
+  <!-- Divider: before RECORD container -->
   <hr class="section-hr">
 
-  <!-- 녹음 영역 -->
+  <!-- RECORD section -->
   <div id="audioRecordContainer" class="slider-container">
-    <!-- 녹음 시간(초) -->
+    <!-- Record time (seconds) -->
     <div class="control-row">
-      <label for="audioRecordTime">녹음 시간(초) :</label>
+      <label for="audioRecordTime">Record Time (seconds):</label>
       <input
         type="number"
         id="audioRecordTime"
@@ -82,13 +82,13 @@
       />
     </div>
 
-    <!-- 녹음 경과 (우측 상단) -->
+    <!-- Recording elapsed (top-right) -->
     <div class="slider-head" aria-live="polite">
-      <span>녹음 경과:&nbsp;</span>
+      <span>Recording Elapsed:&nbsp;</span>
       <span id="audioRecordElapsed" class="elapsed">0.0s</span>
     </div>
 
-    <!-- 녹음 슬라이더 -->
+    <!-- Recording slider -->
     <div class="slider-wrap">
       <input
         type="range"
@@ -97,31 +97,31 @@
         max="60"
         step="0.01"
         value="0"
-        aria-label="녹음 진행률(초)"
+        aria-label="Recording progress (sec)"
       >
     </div>
   </div>
 
-  <!-- 구분선: 플레이어 컨테이너 앞 -->
+  <!-- Divider: before PLAYER container -->
   <hr class="section-hr">
 
-  <!-- 재생 영역 -->
+  <!-- PLAYBACK section -->
   <div id="audioPlayerContainer" class="slider-container">
-    <!-- 재생 시간/슬라이더 + Pause/Play -->
+    <!-- Playback time/slider + Pause/Play -->
     <div class="control-row">
-      <label for="audioPlayerSlider">재생 시간(초) :</label>
+      <label for="audioPlayerSlider">Playback Position (sec):</label>
       <span id="audioPlayerTime" aria-live="polite">0</span>
       <button id="audioPauseButton" disabled>Pause</button>
       <button id="audioResumeButton" disabled>Play</button>
     </div>
 
-    <!-- 재생 경과 (우측 상단) -->
+    <!-- Playback elapsed (top-right) -->
     <div class="slider-head" aria-live="polite">
-      <span>재생 경과:&nbsp;</span>
+      <span>Playback Elapsed:&nbsp;</span>
       <span id="audioPlayerElapsed" class="elapsed">0.0s</span>
     </div>
 
-    <!-- 재생 슬라이더 -->
+    <!-- Playback slider -->
     <div class="slider-wrap">
       <input
         type="range"
@@ -131,25 +131,24 @@
         step="0.01"
         value="0"
         disabled
-        aria-label="재생 진행률(초)"
+        aria-label="Playback progress (sec)"
       >
     </div>
   </div>
 
-  <!-- 로그 박스 -->
+  <!-- Log box -->
   <div id="logArea"></div>
 
-  <!-- Base64 출력 영역 -->
-  <textarea id="base64audio" placeholder="[Base64 보기] MP3 Base64 문자열 표기란" readonly></textarea>
+  <!-- Base64 output area -->
+  <textarea id="base64audio" placeholder="[View Base64] MP3 Base64 output (read-only)" readonly></textarea>
 
-  <!-- 링크 박스 -->
+  <!-- Links box -->
   <div id="linkArea"></div>
 
-
-  <!-- MP3 인코딩용 lamejs (CDN) → 엔진 모듈보다 먼저! -->
+  <!-- lamejs for MP3 encoding (CDN) → must load before the engine module -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/lamejs/1.2.1/lame.min.js"></script>
 
-  <!-- 앱 모듈 (엔진/업로드를 import) -->
+  <!-- App module (imports engine/upload modules) -->
   <script type="module" src="myAudio-app.js?v=1.09-a"></script>
 </body>
 </html>

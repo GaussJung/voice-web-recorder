@@ -1,21 +1,13 @@
 /**
  * audioSlider.js
- * version: 1.06
+ * version: 1.21
  * description: 녹음 시간(초) 입력 + 진행 슬라이더(400~800px) + 시간 경과 시 자동 중지
- *
- * Change Log
- * - v1.06 (2025-08-22): #log → #logArea로 변경. JSON 로그 pretty-print(줄바꿈/들여쓰기) 적용.
- * - v1.05 (2025-08-22): 경과 시간(0.1초) 표시, 녹음 완료 후 audioResumeButton으로도 재생 가능
- * - v1.04 (2025-08-22): 변수명 리팩토링 want → desiredSeconds
- * - v1.03 (2025-08-22): 재생 시간 우측 Pause/Play 추가(일시정지/재개). 상단 Stop은 초기화 유지
- * - v1.02 (2025-08-22): 재생 시간 라벨/슬라이더 추가, 슬라이더 줄바꿈→CSS 마진
- * - v1.01 (2025-08-22): audioRecord.js 기능 포함 + 녹음시간 입력 + 진행 슬라이더 + 자동 중지
  */
 
 // ===== 설정(엔드포인트) =====
 const PRESIGNED_URL_ENDPOINT = "/api/presigned-url";
 const BASE64_UPLOAD_ENDPOINT = "/api/upload-base64";
-const version = "v1.06";
+const version = "v1.21";
 console.log(`audioSlider ${version}`);
 
 // ===== DOM =====
@@ -24,12 +16,9 @@ const stopRecordButton   = document.getElementById('stopRecordButton');
 const playButton         = document.getElementById('playButton');
 const stopPlayButton     = document.getElementById('stopPlayButton');
 const downloadButton     = document.getElementById('downloadButton');
-const viewBase64Button   = document.getElementById('viewBase64Button');
-const s3UploadButton     = document.getElementById('s3UploadButton');
-const base64UploadButton = document.getElementById('base64UploadButton');
+ 
 const logAreaEl          = document.getElementById('logArea');
-const base64Textarea     = document.getElementById('base64audio');
-
+ 
 // 녹음 슬라이더/시간 입력
 const timeInput     = document.getElementById('audioRecordTime');
 const recordSlider  = document.getElementById('audioRecordSlider');
@@ -75,34 +64,42 @@ let autoStopTimerId = null;
 const MP3_CHANNELS = 1;      // mono
 let MP3_KBPS = 128;          // 96(voice), 128(music)
 
-/* ===== 유틸 ===== */
+// 로그 유틸리티 
 function log(msg = "") {
   console.log(msg);
   if (!logAreaEl) return;
   logAreaEl.textContent += (typeof msg === "string" ? msg : String(msg)) + "\n";
-}
+};
+
+// 객체를 JSON 문자열로 출력 
 function logJSON(label, obj) {
   const pretty = JSON.stringify(obj, null, 2);
   log(`${label}:\n${pretty}`);
-}
-function secs(n) { return Math.max(0, Math.round(n)); }
+};
+
+// 초 단위 -> 정수 초
+function secs(n) { return Number.isFinite(n) ? Math.max(0, Math.round(n)) : 0; };
+
+// 초 단위 -> 소수점 1자리 초
 function secs1(n) {
   if (!Number.isFinite(n)) return "0.0s";
   return `${Math.max(0, Math.floor(n * 10) / 10).toFixed(1)}s`; // 0.1초 단위
-}
+};
 
-/* ===== 재생 제어 버튼 상태 ===== */
+// 재생 제어 버튼 상태 
 function setPlayerEnabled(enabled) {
   if (playerSlider) playerSlider.disabled = !enabled;
   if (!enabled) {
     pauseBtn.disabled  = true;
     resumeBtn.disabled = true;
   }
-}
+};
+
+// 일시정지/재개 버튼 상태
 function setPauseResumeState({ canPause, canResume }) {
   if (pauseBtn)  pauseBtn.disabled  = !canPause;
   if (resumeBtn) resumeBtn.disabled = !canResume;
-}
+};
 
 /* 재생 UI 상태 업데이트 (상단 버튼) */
 function updatePlaybackUI(isPlaying) {
@@ -116,9 +113,9 @@ function updatePlaybackUI(isPlaying) {
     playButton.disabled        = !hasData;
     stopPlayButton.disabled    = true;
   }
-}
+};
 
-/* 초기 세팅 */
+// 초기 설정
 function initSetup() {
   try {
     const AC = window.AudioContext || window.webkitAudioContext;
@@ -142,34 +139,40 @@ function initSetup() {
   if (playerTimeEl) playerTimeEl.textContent = "0";
   if (recordElapsedEl) recordElapsedEl.textContent = "0.0s";
   if (playerElapsedEl) playerElapsedEl.textContent = "0.0s";
-}
+};
+
+// 초기설정 호출 
 initSetup();
 
-/* 제약 */
+// 오디오 캡처 제약 조건 빌드
 function buildAudioConstraints(profile) {
   if (profile === "music") {
     return { sampleRate: 48000, channelCount: MP3_CHANNELS, echoCancellation: false, noiseSuppression: false, autoGainControl: false };
   } else {
     return { sampleRate: 48000, channelCount: MP3_CHANNELS, echoCancellation: false, noiseSuppression: true, autoGainControl: false };
   }
-}
+};
 
-/* 변환/인코딩 */
+// Float32Array -> Int16Array 변환
 function float32ToInt16(float32Array) {
   const out = new Int16Array(float32Array.length);
   for (let i = 0; i < float32Array.length; i++) {
     let s = Math.max(-1, Math.min(1, float32Array[i]));
-    out[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+    out[i] = (s < 0 ? s * 0x8000 : s * 0x7FFF) | 0;
   }
   return out;
-}
+};
+
+// Float32Array 병합
 function mergeFloat32(chunks) {
   const total = chunks.reduce((acc, a) => acc + a.length, 0);
   const out = new Float32Array(total);
   let offset = 0;
   for (const a of chunks) { out.set(a, offset); offset += a.length; }
   return out;
-}
+};
+
+// MP3 인코딩 (lamejs)
 function encodeMP3FromFloat32Chunks(chunks, sampleRate, kbps = MP3_KBPS) {
   if (!chunks.length) throw new Error('No audio chunks to encode.');
   const merged = mergeFloat32(chunks);
@@ -195,77 +198,37 @@ function encodeMP3FromFloat32Chunks(chunks, sampleRate, kbps = MP3_KBPS) {
   const flush = encoder.flush();
   if (flush.length) mp3Data.push(flush);
   return new Blob(mp3Data, { type: 'audio/mpeg' });
-}
+};
+
+// 마지막 ObjectURL 해제
 function revokeLastURL() {
   if (lastObjectURL) { URL.revokeObjectURL(lastObjectURL); lastObjectURL = null; }
-}
+};
+
+// 녹음 데이터가 있을 때 mp3Blob 준비
 function ensureMP3Ready() {
   if (!recordedChunks.length) throw new Error('인코딩할 오디오가 없습니다.');
   if (!mp3Blob) { mp3Blob = encodeMP3FromFloat32Chunks(recordedChunks, sampleRate, MP3_KBPS); }
-}
+};
+
+// 타임스탬프 파일명
 function timestampFilename(prefix = 'recording', ext = 'mp3') {
   const d = new Date(), pad = (n)=>String(n).padStart(2,'0');
   return `${prefix}_${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}.${ext}`;
-}
-function blobToBase64String(blob) {
-  return new Promise((resolve, reject) => {
-    const r = new FileReader();
-    r.onloadend = () => {
-      const s = String(r.result), i = s.indexOf(',');
-      if (i === -1) return reject(new Error('Invalid data URL.'));
-      resolve(s.slice(i + 1));
-    };
-    r.onerror = (e) => reject(e);
-    r.readAsDataURL(blob);
-  });
-}
+};
 
-/* === Base64를 textarea에 표시 === */
-async function viewAudioBase64() {
-  ensureMP3Ready();
-  const b64 = await blobToBase64String(mp3Blob);
-  if (base64Textarea) base64Textarea.value = b64;
-  log(`Base64 length: ${b64.length}`);
-  return b64;
-}
-
-/* === Base64 업로드(JSON POST) === */
-async function uploadBase64ToServer(endpoint = BASE64_UPLOAD_ENDPOINT) {
-  ensureMP3Ready();
-  const base64 = await viewAudioBase64();
-  const filename = timestampFilename('recording', 'mp3');
-  const res = await fetch(endpoint, {
-    method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ filename, data: base64 })
-  });
-  if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
-  const json = await res.json().catch(() => ({}));
-  log(`✅ Base64 업로드 성공 (${filename})`);
-  return json;
-}
-
-/* === S3 프리사인드 URL 업로드 === */
-async function uploadToS3(mp3Blob) {
-  const resp = await fetch(PRESIGNED_URL_ENDPOINT, { method: 'GET' });
-  if (!resp.ok) throw new Error('프리사인드 URL 요청 실패');
-  const { url, key } = await resp.json();
-  if (!url) throw new Error('프리사인드 URL이 응답에 없습니다.');
-  const putRes = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'audio/mpeg' }, body: mp3Blob });
-  if (!putRes.ok) throw new Error(`S3 업로드 실패: ${putRes.status}`);
-  log(`✅ S3 업로드 성공 (key: ${key || 'unknown'})`);
-  return { key, url };
-}
-
-/* =========================
-   슬라이더/자동 중지 관련(녹음)
-========================= */
+ 
+ 
+//  슬라이더/자동 중지 관련(녹음)
 function resetRecordSliderWithMax(maxSec) {
   if (!recordSlider) return;
   recordSlider.min = "0";
   recordSlider.max = String(maxSec);
   recordSlider.value = "0";
   if (recordElapsedEl) recordElapsedEl.textContent = "0.0s";
-}
+};
+
+// 녹음 슬라이더 애니메이션
 function animateRecordSlider() {
   if (!startTs || !recordSlider) return;
   const now = performance.now();
@@ -274,17 +237,17 @@ function animateRecordSlider() {
   if (recordElapsedEl) recordElapsedEl.textContent = secs1(elapsedSec);
   if (elapsedSec >= targetDurationSec) { stopRecording("auto-stop"); return; }
   rafId = requestAnimationFrame(animateRecordSlider);
-}
+};
+
+// 타이머/애니메이션 정리
 function clearTimers() {
   if (rafId) cancelAnimationFrame(rafId);
   rafId = null;
   clearTimeout(autoStopTimerId);
   autoStopTimerId = null;
-}
+};
 
-/* =========================
-   재생 준비/메타데이터
-========================= */
+// 재생 준비
 function preparePlayerFromBlob() {
   try { ensureMP3Ready(); } catch (_) { return; }
   if (!lastObjectURL) lastObjectURL = URL.createObjectURL(mp3Blob);
@@ -297,23 +260,24 @@ function preparePlayerFromBlob() {
       playerSlider.max = String(dur || 0);
       playerSlider.value = "0";
       setPlayerEnabled(true);
-    }
+    };
+
     if (playerElapsedEl) playerElapsedEl.textContent = "0.0s";
     // 녹음 완료 이후: Resume(Play) 버튼 활성화(처음 재생도 가능)
     setPauseResumeState({ canPause: false, canResume: true });
     log(`Prepared player (duration=${dur.toFixed(3)}s)`);
   }, { once: true });
-}
 
-/* =========================
-   녹음 시작/중지
-========================= */
+};
+
+// 녹음 시작
 async function startRecording() {
+
   if (playbackAudio && !playbackAudio.paused) {
     playbackAudio.pause();
     playbackAudio.currentTime = 0;
     updatePlaybackUI(false);
-  }
+  }; 
 
   // 입력값 파싱 (desiredSeconds)
   const desiredSeconds = parseInt(timeInput?.value ?? "60", 10);
@@ -355,7 +319,7 @@ async function startRecording() {
         const s = track.getSettings();
         logJSON('Actual track settings', s);
       }
-    }
+    };
 
     inputGain = audioContext.createGain();
     inputGain.gain.value = (CAPTURE_PROFILE === "voice") ? 1.2 : 1.0;
@@ -376,9 +340,7 @@ async function startRecording() {
     playButton.disabled          = true;
     stopPlayButton.disabled      = true;
     downloadButton.disabled      = true;
-    viewBase64Button.disabled    = true;
-    s3UploadButton.disabled      = true;
-    base64UploadButton.disabled  = true;
+ 
 
     startTs = performance.now();
     animateRecordSlider();
@@ -391,8 +353,10 @@ async function startRecording() {
     log('오류: ' + err.message);
     stopRecording("error");
   }
-}
 
+};
+
+// 녹음정지 
 function stopRecording(reason = "user") {
   try {
     clearTimers();
@@ -418,10 +382,7 @@ function stopRecording(reason = "user") {
     playButton.disabled          = !hasData;
     stopPlayButton.disabled      = true;
     downloadButton.disabled      = !hasData;
-    viewBase64Button.disabled    = !hasData;
-    s3UploadButton.disabled      = !hasData;
-    base64UploadButton.disabled  = !hasData;
-
+ 
     if (recordSlider && startTs) {
       const elapsedSec = (performance.now() - startTs) / 1000;
       recordSlider.value = Math.min(elapsedSec, targetDurationSec).toFixed(3);
@@ -444,11 +405,9 @@ function stopRecording(reason = "user") {
     console.error(err);
     log('오류: ' + err.message);
   }
-}
+}; 
 
-/* =========================
-   재생/일시정지/재개
-========================= */
+// 재생/일시정지/재개
 function ensurePlaybackObject() {
   if (playbackAudio) return;
 
@@ -489,8 +448,9 @@ function ensurePlaybackObject() {
       onStopLike();
     }
   });
-}
+}; 
 
+// 재생 버튼
 playButton.addEventListener('click', () => {
   if (!recordedChunks.length && !mp3Blob) { log('재생할 데이터가 없습니다.'); return; }
   try {
@@ -513,6 +473,7 @@ playButton.addEventListener('click', () => {
   }
 });
 
+// 일시정지 버튼
 pauseBtn.addEventListener('click', () => {
   if (!playbackAudio) return;
   try { playbackAudio.pause(); } catch (e) { log('Pause 오류: ' + e.message); }
@@ -537,6 +498,7 @@ resumeBtn.addEventListener('click', () => {
   }
 });
 
+// 재생 중지 버튼
 stopPlayButton.addEventListener('click', () => {
   try {
     if (playbackAudio) {
@@ -569,12 +531,12 @@ playerSlider?.addEventListener('input', () => {
   }
 });
 
-/* =========================
-   기타 버튼/입력
-========================= */
+
+// 기타 버튼/입력
 startRecordButton.addEventListener('click', startRecording);
 stopRecordButton.addEventListener('click', () => stopRecording("user"));
 
+// 녹음 슬라이더 수동 조작
 recordSlider?.addEventListener('input', () => {
   if (!startTs) return;
   const elapsedSec = (performance.now() - startTs) / 1000;
@@ -582,12 +544,13 @@ recordSlider?.addEventListener('input', () => {
   if (recordElapsedEl) recordElapsedEl.textContent = secs1(elapsedSec);
 });
 
+// 녹음 시간 입력
 timeInput?.addEventListener('change', () => {
   const sec = parseInt(timeInput.value, 10) || 60;
   resetRecordSliderWithMax(Math.max(1, Math.min(3600, sec)));
 });
 
-/* ===== 다운로드/업로드 ===== */
+//  다운로드 버튼
 downloadButton.addEventListener('click', () => {
   if (!recordedChunks.length) { log('다운로드할 데이터가 없습니다.'); return; }
   try {
@@ -606,7 +569,4 @@ downloadButton.addEventListener('click', () => {
     log('다운로드 오류: ' + e.message);
   }
 });
-
-viewBase64Button.addEventListener('click', async () => { try { await viewAudioBase64(); } catch (_) {} });
-s3UploadButton.addEventListener('click', async () => { try { ensureMP3Ready(); await uploadToS3(mp3Blob); } catch (_) {} });
-base64UploadButton.addEventListener('click', async () => { try { await uploadBase64ToServer(BASE64_UPLOAD_ENDPOINT); } catch (_) {} });
+ 
